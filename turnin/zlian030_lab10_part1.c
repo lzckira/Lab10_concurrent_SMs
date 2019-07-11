@@ -9,14 +9,11 @@
  */
 #include <avr/io.h>
 #include <avr/interrupt.h>
-//#ifdef _SIMULATE_
-//#include "simAVRHeader.h"
-//#endif
+#ifdef _SIMULATE_
+#include "simAVRHeader.h"
+#endif
+
 volatile unsigned char TimerFlag = 0;
-unsigned short TL_Period = 38;
-unsigned short BL_Period = 125;
-unsigned short Speaker_Period = 2;
-unsigned short Period = 1;
 unsigned long _avr_timer_M = 1;
 unsigned long _avr_timer_cntcurr = 0;
 
@@ -52,41 +49,24 @@ void TimerSet(unsigned long M) {
 
 enum TL_States {LED1, LED2, LED3} TL_state;
 enum BL_States {ON, OFF} BL_state;
-enum Speaker_States {sound, quiet} Speaker_state;
 unsigned char tmpTL = 0x00;
 unsigned char tmpBL = 0x00;
-unsigned char tmpSpeaker = 0x00;
 void TL_Tick();
 void BL_Tick();
-void Speaker_Tick();
 
 int main(void) {
     DDRA = 0x00; PORTA = 0xFF; // Configure port B's 8 pins as inputs
     DDRB = 0xFF; PORTB = 0x00; // Configure port B's 8 pins as outputs, initialize to 0s
     TL_state = LED1;
     BL_state = OFF;
-    Speaker_state = OFF;
-    TimerSet(1);
+    TimerSet(125);
     TimerOn();
     while (1) {
-		if (TL_Period >= 38) {
-			TL_Tick();
-			TL_Period = 0;
-		}
-		if (BL_Period >= 125) {
-			BL_Tick();
-			BL_Period = 0;
-		}
-		if (Speaker_Period >= 2) {
-			Speaker_Tick();
-			Speaker_Period = 0;
-		}
-		PORTB = ((tmpSpeaker | tmpBL) | tmpTL);
-		TL_Period = TL_Period + Period;
-		BL_Period = BL_Period + Period;
-		Speaker_Period = Speaker_Period + Period;
-		while (!TimerFlag) { }
-		TimerFlag = 0;
+		TL_Tick();
+		BL_Tick();
+		PORTB = (tmpTL | tmpBL);
+		while (!TimerFlag);
+			TimerFlag = 0;
 	}
     return 1;
 }
@@ -127,28 +107,6 @@ void BL_Tick() {
 	default:
 		BL_state = OFF;
 	    tmpBL = 0x00;
-		break;
-		    
-	}
-}
-
-void Speaker_Tick() {
-    switch(Speaker_state) {
-	case sound:
-		Speaker_state = quiet;
-		tmpSpeaker = 0x10;
-	    break;
-	case quiet:
-		if (PINA == 0xFE) {
-			Speaker_state = sound;
-		}
-		
-			tmpSpeaker = 0x00;
-	    
-	    break;
-	default:
-		Speaker_state = quiet;
-	    tmpSpeaker = 0x00;
 		break;
 		    
 	}

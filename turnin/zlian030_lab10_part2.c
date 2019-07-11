@@ -9,9 +9,9 @@
  */
 #include <avr/io.h>
 #include <avr/interrupt.h>
-//#ifdef _SIMULATE_
-//#include "simAVRHeader.h"
-//#endif
+#ifdef _SIMULATE_
+#include "simAVRHeader.h"
+#endif
 volatile unsigned char TimerFlag = 0;
 unsigned short TL_Period = 38;
 unsigned short BL_Period = 125;
@@ -81,7 +81,7 @@ int main(void) {
 			Speaker_Tick();
 			Speaker_Period = 0;
 		}
-		PORTB = ((tmpSpeaker | tmpBL) | tmpTL);
+		PORTB = ((tmpTL | tmpBL) | tmpSpeaker);
 		TL_Period = TL_Period + Period;
 		BL_Period = BL_Period + Period;
 		Speaker_Period = Speaker_Period + Period;
@@ -136,15 +136,17 @@ void Speaker_Tick() {
     switch(Speaker_state) {
 	case sound:
 		Speaker_state = quiet;
-		tmpSpeaker = 0x10;
+		tmpSpeaker = 0x00;
 	    break;
 	case quiet:
-		if (PINA == 0xFE) {
+		if (~PINA == 0x01) {
 			Speaker_state = sound;
+			tmpSpeaker = 0x10;
 		}
-		
+		else {
+			Speaker_state = quiet;
 			tmpSpeaker = 0x00;
-	    
+	    }
 	    break;
 	default:
 		Speaker_state = quiet;
