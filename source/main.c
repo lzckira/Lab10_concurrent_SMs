@@ -15,6 +15,7 @@
 volatile unsigned char TimerFlag = 0;
 unsigned short TL_Period = 38;
 unsigned short BL_Period = 125;
+unsigned short currentP = 2;
 unsigned short Speaker_Period = 2;
 unsigned short Period = 1;
 unsigned long _avr_timer_M = 1;
@@ -22,7 +23,7 @@ unsigned long _avr_timer_cntcurr = 0;
 
 void TimerOn() {
 	TCCR1B = 0x0B;
-	OCR1A = 125;
+	OCR1A = 12;
 	TIMSK1 = 0x02;
 	TCNT1 = 0;
 	_avr_timer_cntcurr = _avr_timer_M;
@@ -56,6 +57,9 @@ enum Speaker_States {sound, quiet} Speaker_state;
 unsigned char tmpTL = 0x00;
 unsigned char tmpBL = 0x00;
 unsigned char tmpSpeaker = 0x00;
+unsigned char count = 0x00;
+unsigned char counter = 0x01;
+unsigned char flag = 0x00;
 void TL_Tick();
 void BL_Tick();
 void Speaker_Tick();
@@ -69,18 +73,21 @@ int main(void) {
     TimerSet(1);
     TimerOn();
     while (1) {
-		if (TL_Period >= 38) {
+		if (TL_Period >= 380) {
 			TL_Tick();
 			TL_Period = 0;
 		}
-		if (BL_Period >= 125) {
+		if (BL_Period >= 1250) {
 			BL_Tick();
 			BL_Period = 0;
 		}
-		if (Speaker_Period >= 2) {
+		if (Speaker_Period >= currentP) {
 			Speaker_Tick();
 			Speaker_Period = 0;
 		}
+		if (PINA == 0xFD && flag == 0x00) { currentP++; flag = 0x01;}
+		if (PINA == 0xFF) {flag = 0x00;}
+		if (PINA == 0xFB && flag == 0x00 && currentP > 1) { currentP--; flag = 0x01;}
 		PORTB = ((tmpSpeaker | tmpBL) | tmpTL);
 		TL_Period = TL_Period + Period;
 		BL_Period = BL_Period + Period;
@@ -135,16 +142,19 @@ void BL_Tick() {
 void Speaker_Tick() {
     switch(Speaker_state) {
 	case sound:
-		Speaker_state = quiet;
+	    
+			Speaker_state = quiet;
+		
 		tmpSpeaker = 0x10;
 	    break;
 	case quiet:
 		if (PINA == 0xFE) {
-			Speaker_state = sound;
+			
+				Speaker_state = sound;
+			
 		}
 		
-			tmpSpeaker = 0x00;
-	    
+	    tmpSpeaker = 0x00;
 	    break;
 	default:
 		Speaker_state = quiet;
